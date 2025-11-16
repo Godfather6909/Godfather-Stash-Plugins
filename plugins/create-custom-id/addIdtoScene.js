@@ -1,20 +1,50 @@
 // addIdtoScene.js
-(function () {
-  // --- helpers -------------------------------------------------------------
+(async () => {
+  // Set up on scene edit pages, once the edit form exists.
+  csLib.PathElementListener("/scenes/", "[id*='-edit-details']", () => {
+    setupAddIdUI();
+  });
 
-  function findStashIdsFormGroup() {
-    const label = document.querySelector('label[for="stash_ids"]');
-    if (!label) return null;
-    return label.closest('.form-group');
+  function setupAddIdUI() {
+    const objID = window.location.pathname.split("/")[2];
+
+    // Only show on existing scenes, not on "new"
+    if (objID !== "new") {
+      insertAddIdButton();
+    }
   }
 
+  function insertAddIdButton() {
+    // Avoid duplicate buttons
+    if (document.querySelector("button.customId-addButton") != null) {
+      return;
+    }
+
+    const stashLabel = document.querySelector("label[for='stash_ids']");
+    if (!stashLabel) return;
+
+    const addButton = document.createElement("button");
+    addButton.className = "customId-addButton btn btn-secondary";
+    addButton.type = "button";
+    addButton.innerText = "Add ID";
+    addButton.onclick = (event) => {
+      event.preventDefault();
+      showModal();
+    };
+
+    // Append button to the Stash IDs label (same pattern as tag copy/paste)
+    stashLabel.append(addButton);
+  }
+
+  // --- Modal helpers ------------------------------------------------------
+
   function ensureModalExists() {
-    let modal = document.getElementById('custom-add-id-modal');
+    let modal = document.getElementById("custom-add-id-modal");
     if (modal) return modal;
 
-    modal = document.createElement('div');
-    modal.id = 'custom-add-id-modal';
-    modal.className = 'custom-id-modal-backdrop';
+    modal = document.createElement("div");
+    modal.id = "custom-add-id-modal";
+    modal.className = "custom-id-modal-backdrop";
 
     modal.innerHTML = `
       <div class="custom-id-modal-content">
@@ -41,22 +71,19 @@
     document.body.appendChild(modal);
 
     // Click outside content closes modal
-    modal.addEventListener('click', function (e) {
-      if (e.target === modal) {
-        hideModal();
-      }
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) hideModal();
     });
 
-    const cancelBtn = modal.querySelector('#custom-id-cancel-btn');
-    const okBtn = modal.querySelector('#custom-id-ok-btn');
+    const cancelBtn = modal.querySelector("#custom-id-cancel-btn");
+    const okBtn = modal.querySelector("#custom-id-ok-btn");
 
-    cancelBtn.addEventListener('click', hideModal);
-    okBtn.addEventListener('click', function () {
-      // No functionality yet – just close the modal.
-      // For later testing you can uncomment:
-      // const instance = document.getElementById('custom-id-instance-input').value;
-      // const idVal = document.getElementById('custom-id-value-input').value;
-      // console.log('Instance:', instance, 'ID:', idVal);
+    cancelBtn.addEventListener("click", hideModal);
+    okBtn.addEventListener("click", () => {
+      // For now: just close. You can log later for testing:
+      // const instance = document.getElementById("custom-id-instance-input").value;
+      // const idVal = document.getElementById("custom-id-value-input").value;
+      // console.log("Instance:", instance, "ID:", idVal);
       hideModal();
     });
 
@@ -65,71 +92,19 @@
 
   function showModal() {
     const modal = ensureModalExists();
-    modal.style.display = 'flex';
+    modal.style.display = "flex";
 
-    // Clear previous values each time we open
-    const instanceInput = document.getElementById('custom-id-instance-input');
-    const idInput = document.getElementById('custom-id-value-input');
-    if (instanceInput) instanceInput.value = '';
-    if (idInput) idInput.value = '';
-
+    // Reset fields
+    const instanceInput = document.getElementById("custom-id-instance-input");
+    const idInput = document.getElementById("custom-id-value-input");
+    if (instanceInput) instanceInput.value = "";
+    if (idInput) idInput.value = "";
     if (instanceInput) instanceInput.focus();
   }
 
   function hideModal() {
-    const modal = document.getElementById('custom-add-id-modal');
+    const modal = document.getElementById("custom-add-id-modal");
     if (!modal) return;
-    modal.style.display = 'none';
-  }
-
-  function injectButton() {
-    // Avoid duplicates
-    if (document.getElementById('custom-add-id-btn')) return;
-
-    const formGroup = findStashIdsFormGroup();
-    if (!formGroup || !formGroup.parentNode) return;
-
-    const wrapper = document.createElement('div');
-    wrapper.className = 'custom-id-add-wrapper';
-
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.id = 'custom-add-id-btn';
-    btn.className = 'btn btn-sm btn-outline-primary';
-    btn.textContent = 'Add ID';
-
-    btn.addEventListener('click', showModal);
-
-    wrapper.appendChild(btn);
-
-    // Insert right after the whole Stash IDs form group
-    formGroup.parentNode.insertBefore(wrapper, formGroup.nextSibling);
-  }
-
-  function init() {
-    // Try immediately
-    if (findStashIdsFormGroup()) {
-      injectButton();
-      return;
-    }
-
-    // If not present yet, poll a few times (simple and good enough for testing)
-    let attempts = 0;
-    const maxAttempts = 20;
-    const interval = setInterval(function () {
-      attempts++;
-      if (findStashIdsFormGroup()) {
-        injectButton();
-        clearInterval(interval);
-      } else if (attempts >= maxAttempts) {
-        clearInterval(interval);
-      }
-    }, 500);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
+    modal.style.display = "none";
   }
 })();
