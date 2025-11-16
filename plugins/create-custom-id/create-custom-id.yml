@@ -1,9 +1,10 @@
 name: Create Custom ID
-description: Adds custom ids to a scene in Stash
+description: Adds custom stash ids to a scene in Stash
 
 version: 0.1.0
 ui:
   css:
     - addId.css
   javascript:
+
     - addIdtoScene.js
