@@ -6,5 +6,6 @@ ui:
   css:
     - addId.css
   javascript:
-
+    - cs-ui-lib.js
     - addIdtoScene.js
+
