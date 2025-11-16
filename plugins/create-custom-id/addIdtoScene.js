@@ -112,13 +112,16 @@
       <div class="custom-id-modal-content">
         <h5>Add Custom ID</h5>
         <div class="form-group">
-          <label for="custom-id-instance-input">Instance</label>
-          <input
-            id="custom-id-instance-input"
-            type="text"
-            class="form-control"
-            placeholder="https://stashdb.org/graphql"
-          />
+          <label for="custom-id-instance-select">Instance</label>
+          <select id="custom-id-instance-select" class="form-control">
+            <option value="https://stashdb.org/graphql">stashdb.org</option>
+            <option value="https://fansdb.net/graphql">fansdb.net</option>
+            <option value="https://fansdb.cc/graphql">fansdb.cc</option>
+            <option value="https://fansdb.xyz/graphql">fansdb.xyz</option>
+            <option value="https://javstash.org/graphql">javstash.org</option>
+            <option value="https://pmvstash.org/graphql">pmvstash.org</option>
+            <option value="https://theporndb.net/graphql">theporndb.net</option>
+          </select>
         </div>
         <div class="form-group">
           <label for="custom-id-value-input">ID</label>
@@ -155,15 +158,18 @@
     const modal = ensureModalExists();
     modal.classList.add("is-visible");
 
-    const instanceInput = document.getElementById("custom-id-instance-input");
+    const instanceSelect = document.getElementById("custom-id-instance-select");
     const idInput = document.getElementById("custom-id-value-input");
-    if (instanceInput && !instanceInput.value) {
-      // Optional: default to your preferred instance
-      instanceInput.value = "https://stashdb.org/graphql";
-    }
-    if (idInput) idInput.value = "";
 
-    if (instanceInput) instanceInput.focus();
+    // Reset to first option + clear ID each time
+    if (instanceSelect) {
+      instanceSelect.selectedIndex = 0;
+    }
+    if (idInput) {
+      idInput.value = "";
+    }
+
+    if (instanceSelect) instanceSelect.focus();
   }
 
   function hideModal() {
@@ -186,10 +192,10 @@
       return;
     }
 
-    const instanceInput = document.getElementById("custom-id-instance-input");
+    const instanceSelect = document.getElementById("custom-id-instance-select");
     const idInput = document.getElementById("custom-id-value-input");
 
-    let baseEndpoint = (instanceInput?.value || "").trim();
+    let baseEndpoint = (instanceSelect && instanceSelect.value || "").trim();
     const stash_id = (idInput?.value || "").trim();
 
     if (!baseEndpoint || !stash_id) {
