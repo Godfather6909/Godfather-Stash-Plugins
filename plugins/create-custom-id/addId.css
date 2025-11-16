@@ -1,24 +1,30 @@
-/* Match the style of the imageGalleryNav copy/paste buttons */
-button.customId-addButton {
-  float: right;
-  height: 21px;
-  line-height: 20px;
-  padding: 0 10px;
-  margin-right: 15px;
+/* Wrapper that sits right under the "Stash IDs" form-group */
+.custom-id-add-wrapper {
+  margin-top: 0.5rem;
 }
 
-/* --- Modal backdrop --- */
+/* The "Add ID" button styling (leans on Bootstrap classes) */
+#custom-add-id-btn {
+  margin-top: 0.25rem;
+}
+
+/* Backdrop for the modal */
 .custom-id-modal-backdrop {
   position: fixed;
-  inset: 0; /* top/right/bottom/left: 0 */
-  background: rgba(0, 0, 0, 0.5);
-  display: none;               /* JS sets to flex when open */
+  inset: 0; /* top,right,bottom,left:0 */
+  display: none; /* hidden by default */
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1050; /* above normal content, below any existing modals if needed */
 }
 
-/* --- Modal content --- */
+/* Visible state */
+.custom-id-modal-backdrop.is-visible {
+  display: flex;
+}
+
+/* Modal content box */
 .custom-id-modal-content {
   background: #ffffff;
   padding: 1rem 1.5rem;
@@ -28,17 +34,11 @@ button.customId-addButton {
   box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
 }
 
-/* Modal title spacing */
+/* Slight spacing tweaks */
 .custom-id-modal-content h5 {
   margin-bottom: 1rem;
 }
 
-/* Spacing between fields */
-.custom-id-modal-content .form-group {
-  margin-bottom: 0.75rem;
-}
-
-/* Footer with buttons */
 .custom-id-modal-footer {
   display: flex;
   justify-content: flex-end;
