@@ -64,8 +64,8 @@
     return await callGQL({ query, variables });
   }
 
+  // Generate base, base1, base2, ... without colliding for this scene
   function generateEndpointVariant(baseEndpoint, stashIds) {
-    // Collect numeric suffixes already used for this base
     const used = new Set();
     for (const s of stashIds) {
       if (!s || typeof s.endpoint !== "string") continue;
@@ -80,7 +80,6 @@
       }
     }
 
-    // Smallest non-negative integer not in `used`
     let n = 0;
     while (used.has(n)) n++;
 
@@ -135,7 +134,7 @@
           <button type="button" class="btn btn-primary" id="custom-id-ok-btn">OK</button>
         </div>
       </div>
-    """
+    `;
 
     document.body.appendChild(modal);
 
@@ -159,7 +158,7 @@
     const instanceInput = document.getElementById("custom-id-instance-input");
     const idInput = document.getElementById("custom-id-value-input");
     if (instanceInput && !instanceInput.value) {
-      // Optional: default to local stash or a known instance
+      // Optional: default to your preferred instance
       instanceInput.value = "https://stashdb.org/graphql";
     }
     if (idInput) idInput.value = "";
@@ -174,7 +173,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // OK button handler – now supports multiple IDs per "instance" via suffixes
+  // OK button handler – supports multiple IDs per "instance" via suffixes
   // ---------------------------------------------------------------------------
 
   async function onOkClicked(e) {
@@ -213,7 +212,7 @@
       // 1) Fetch existing stash_ids
       const currentStashIds = await fetchSceneStashIds(sceneId);
 
-      // 2) Check if this ID already exists for this instance group
+      // 2) Avoid duplicate stash_id for the same "instance group"
       if (stashIdAlreadyExists(baseEndpoint, stash_id, currentStashIds)) {
         console.info("[Create Custom ID] This stash ID already exists for that instance group.");
         hideModal();
@@ -225,8 +224,7 @@
         return;
       }
 
-      // 3) Generate a unique endpoint variant:
-      //    base, base1, base2, ...
+      // 3) Generate a unique endpoint variant: base, base1, base2, ...
       const finalEndpoint = generateEndpointVariant(baseEndpoint, currentStashIds);
       const newEntry = { endpoint: finalEndpoint, stash_id };
 
