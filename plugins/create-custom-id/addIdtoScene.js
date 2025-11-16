@@ -1,6 +1,5 @@
 // addIdtoScene.js
 (function () {
-  // Make sure the CommunityScripts UI lib is available
   if (typeof window.csLib === "undefined") {
     console.error("[Create Custom ID] csLib is not available. Is cs-ui-lib.js loaded before this script?");
     return;
@@ -19,7 +18,6 @@
     if (idx !== -1 && parts.length > idx + 1) {
       return parts[idx + 1];
     }
-    // older/simple style: /scenes/123
     if (parts[0] === "scenes" && parts[1]) {
       return parts[1];
     }
@@ -66,6 +64,39 @@
     return await callGQL({ query, variables });
   }
 
+  function generateEndpointVariant(baseEndpoint, stashIds) {
+    // Collect numeric suffixes already used for this base
+    const used = new Set();
+    for (const s of stashIds) {
+      if (!s || typeof s.endpoint !== "string") continue;
+      const ep = s.endpoint;
+      if (!ep.startsWith(baseEndpoint)) continue;
+
+      const suffix = ep.slice(baseEndpoint.length);
+      if (suffix === "") {
+        used.add(0);
+      } else if (/^\d+$/.test(suffix)) {
+        used.add(parseInt(suffix, 10));
+      }
+    }
+
+    // Smallest non-negative integer not in `used`
+    let n = 0;
+    while (used.has(n)) n++;
+
+    return baseEndpoint + (n === 0 ? "" : String(n));
+  }
+
+  function stashIdAlreadyExists(baseEndpoint, stash_id, stashIds) {
+    // Don't add the same stash_id twice for the same "instance group"
+    return stashIds.some(
+      (s) =>
+        typeof s.endpoint === "string" &&
+        s.endpoint.startsWith(baseEndpoint) &&
+        s.stash_id === stash_id
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Modal helpers
   // ---------------------------------------------------------------------------
@@ -83,22 +114,31 @@
         <h5>Add Custom ID</h5>
         <div class="form-group">
           <label for="custom-id-instance-input">Instance</label>
-          <input id="custom-id-instance-input" type="text" class="form-control" placeholder="https://theporndb.net/graphql" />
+          <input
+            id="custom-id-instance-input"
+            type="text"
+            class="form-control"
+            placeholder="https://stashdb.org/graphql"
+          />
         </div>
         <div class="form-group">
           <label for="custom-id-value-input">ID</label>
-          <input id="custom-id-value-input" type="text" class="form-control" placeholder="UUID or custom ID" />
+          <input
+            id="custom-id-value-input"
+            type="text"
+            class="form-control"
+            placeholder="UUID or custom ID"
+          />
         </div>
         <div class="custom-id-modal-footer">
           <button type="button" class="btn btn-secondary" id="custom-id-cancel-btn">Cancel</button>
           <button type="button" class="btn btn-primary" id="custom-id-ok-btn">OK</button>
         </div>
       </div>
-    `;
+    """
 
     document.body.appendChild(modal);
 
-    // Clicking outside the content closes the modal
     modal.addEventListener("click", (e) => {
       if (e.target === modal) hideModal();
     });
@@ -116,10 +156,12 @@
     const modal = ensureModalExists();
     modal.classList.add("is-visible");
 
-    // Clear previous values for testing
     const instanceInput = document.getElementById("custom-id-instance-input");
     const idInput = document.getElementById("custom-id-value-input");
-    if (instanceInput) instanceInput.value = "";
+    if (instanceInput && !instanceInput.value) {
+      // Optional: default to local stash or a known instance
+      instanceInput.value = "https://stashdb.org/graphql";
+    }
     if (idInput) idInput.value = "";
 
     if (instanceInput) instanceInput.focus();
@@ -132,7 +174,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // OK button handler (actual functionality)
+  // OK button handler – now supports multiple IDs per "instance" via suffixes
   // ---------------------------------------------------------------------------
 
   async function onOkClicked(e) {
@@ -148,10 +190,10 @@
     const instanceInput = document.getElementById("custom-id-instance-input");
     const idInput = document.getElementById("custom-id-value-input");
 
-    const endpoint = (instanceInput?.value || "").trim();
+    let baseEndpoint = (instanceInput?.value || "").trim();
     const stash_id = (idInput?.value || "").trim();
 
-    if (!endpoint || !stash_id) {
+    if (!baseEndpoint || !stash_id) {
       alert("Please fill in both Instance and ID.");
       return;
     }
@@ -171,15 +213,9 @@
       // 1) Fetch existing stash_ids
       const currentStashIds = await fetchSceneStashIds(sceneId);
 
-      // 2) Build new stash_ids array with the new one appended
-      const newEntry = { endpoint, stash_id };
-
-      // Optional: avoid exact duplicates
-      const alreadyExists = currentStashIds.some(
-        (s) => s.endpoint === endpoint && s.stash_id === stash_id
-      );
-      if (alreadyExists) {
-        console.info("[Create Custom ID] This endpoint+ID pair already exists; skipping update.");
+      // 2) Check if this ID already exists for this instance group
+      if (stashIdAlreadyExists(baseEndpoint, stash_id, currentStashIds)) {
+        console.info("[Create Custom ID] This stash ID already exists for that instance group.");
         hideModal();
         if (okBtn) {
           okBtn.disabled = false;
@@ -189,12 +225,17 @@
         return;
       }
 
+      // 3) Generate a unique endpoint variant:
+      //    base, base1, base2, ...
+      const finalEndpoint = generateEndpointVariant(baseEndpoint, currentStashIds);
+      const newEntry = { endpoint: finalEndpoint, stash_id };
+
       const updatedStashIds = [...currentStashIds, newEntry];
 
-      // 3) Send mutation
+      // 4) Send mutation
       await updateSceneStashIds(sceneId, updatedStashIds);
 
-      // 4) Reload so the standard Stash UI shows the new ID pill
+      // 5) Reload so the standard Stash UI shows the new ID pill(s)
       window.location.reload();
     } catch (err) {
       console.error("[Create Custom ID] Error while updating stash_ids:", err);
@@ -212,10 +253,8 @@
   // ---------------------------------------------------------------------------
 
   function insertAddIdButton() {
-    // Avoid duplicates if navigation happens
     if (document.getElementById("custom-add-id-btn")) return;
 
-    // Find the "Stash IDs" label and its form-group container
     const label = document.querySelector("label[for='stash_ids']");
     if (!label) {
       console.warn("[Create Custom ID] Could not find label[for='stash_ids']");
@@ -243,24 +282,15 @@
     });
 
     wrapper.appendChild(btn);
-
-    // Insert right after the entire "Stash IDs" form-group row
     formGroup.parentNode.insertBefore(wrapper, formGroup.nextSibling);
-
-    // Make sure the modal exists at least once
     ensureModalExists();
   }
 
   function setupForSceneEdit() {
-    // Wait until the "Stash IDs" label exists, then inject
     waitForElement("label[for='stash_ids']", () => {
       insertAddIdButton();
     });
   }
-
-  // ---------------------------------------------------------------------------
-  // Hook into Stash navigation: only on /scenes/
-  // ---------------------------------------------------------------------------
 
   PathElementListener(
     "/scenes/",
